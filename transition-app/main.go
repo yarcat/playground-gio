@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image/color"
 	"log"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -36,11 +38,18 @@ func mainloop(w *app.Window, t *material.Theme) error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			gs := gopherOp.Size()
-			cs := gtx.Constraints.Max
-
-			k := minf32(float32(cs.X)/float32(gs.X), float32(cs.Y)/float32(gs.Y))
-			layout.S.Layout(gtx, widget.Image{Src: gopherOp, Scale: k / 2}.Layout)
+			layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return widget.Border{
+					Color: color.RGBA{A: 0xff, R: 0xff},
+					Width: unit.Dp(2),
+				}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					cs := gtx.Constraints.Constrain(gopherOp.Size())
+					gs := gopherOp.Size()
+					k := minf32(1, float32(cs.X)/float32(gs.X), float32(cs.Y)/float32(gs.Y))
+					k /= gtx.Metric.PxPerDp
+					return widget.Image{Src: gopherOp, Scale: k}.Layout(gtx)
+				})
+			})
 
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:

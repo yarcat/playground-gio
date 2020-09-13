@@ -15,9 +15,15 @@ func mustDecodePNG(data string) image.Image {
 	return img
 }
 
-func minf32(a, b float32) float32 {
-	if a < b {
-		return a
+func minf32(v ...float32) (min float32) {
+	if len(v) == 0 {
+		return
 	}
-	return b
+	min = v[0]
+	for _, x := range v[1:] {
+		if x < min {
+			min = x
+		}
+	}
+	return
 }
