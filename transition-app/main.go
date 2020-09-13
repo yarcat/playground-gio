@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -15,12 +14,7 @@ import (
 	"gioui.org/widget/material"
 )
 
-var gopherOp paint.ImageOp
-
-func init() {
-	img := mustDecodePNG(strings.NewReader(gopherPNG))
-	gopherOp = paint.NewImageOp(img)
-}
+var gopherOp = paint.NewImageOp(mustDecodePNG(gopherPNG))
 
 func main() {
 	go func() {

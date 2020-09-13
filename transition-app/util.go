@@ -3,10 +3,11 @@ package main
 import (
 	"image"
 	"image/png"
-	"io"
+	"strings"
 )
 
-func mustDecodePNG(r io.Reader) image.Image {
+func mustDecodePNG(data string) image.Image {
+	r := strings.NewReader(data)
 	img, err := png.Decode(r)
 	if err != nil {
 		panic(err)
