@@ -9,13 +9,11 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/paint"
 	"gioui.org/widget/material"
+	ycwidget "github.com/yarcat/playground-gio/transition-app/widget"
 )
 
-var img = appImage{
-	img: paint.NewImageOp(mustDecodePNG(gopherPNG)),
-}
+var img = ycwidget.NewDragImage(mustDecodePNG(gopherPNG))
 
 func main() {
 	go func() {

@@ -1,4 +1,4 @@
-package main
+package gesture
 
 import (
 	"gioui.org/f32"
@@ -8,13 +8,17 @@ import (
 	"gioui.org/unit"
 )
 
-type drag struct {
+// Drag detects drags and returns relative offset since the last click or drag
+// event.
+type Drag struct {
 	dragging bool
 	start    f32.Point
 	pid      pointer.ID
 }
 
-func (d *drag) Offset(cfg unit.Metric, q event.Queue) (offs f32.Point, ok bool) {
+// Offset returns an offset since the last relevant pointer event. The flag
+// indicates whether drag is active.
+func (d *Drag) Offset(cfg unit.Metric, q event.Queue) (offs f32.Point, ok bool) {
 	var pe *pointer.Event
 	for _, e := range q.Events(d) {
 		e, ok := e.(pointer.Event)
@@ -55,7 +59,7 @@ func (d *drag) Offset(cfg unit.Metric, q event.Queue) (offs f32.Point, ok bool) 
 	return offs, true
 }
 
-func (d *drag) Add(ops *op.Ops) {
+func (d *Drag) Add(ops *op.Ops) {
 	op := pointer.InputOp{
 		Tag:   d,
 		Grab:  d.dragging,

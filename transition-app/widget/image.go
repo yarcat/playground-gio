@@ -1,4 +1,4 @@
-package main
+package widget
 
 import (
 	"image"
@@ -12,15 +12,24 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
+	ycf32 "github.com/yarcat/playground-gio/transition-app/f32"
+	ycgest "github.com/yarcat/playground-gio/transition-app/gesture"
 )
 
-type appImage struct {
+// DragImage implements a draggable image.
+type DragImage struct {
 	img  paint.ImageOp
-	gest drag
+	gest ycgest.Drag
 	offs f32.Point
 }
 
-func (img *appImage) Layout(gtx layout.Context) layout.Dimensions {
+// NewDragImage returns new draggable image.
+func NewDragImage(img image.Image) *DragImage {
+	return &DragImage{img: paint.NewImageOp(img)}
+}
+
+// Layout lays out the image by taking the minimal space close the image size.
+func (img *DragImage) Layout(gtx layout.Context) layout.Dimensions {
 	if offs, ok := img.gest.Offset(gtx.Metric, gtx); ok {
 		img.offs = img.offs.Add(offs)
 	}
@@ -43,7 +52,7 @@ func layoutImg(gtx layout.Context, img paint.ImageOp) layout.Dimensions {
 	dim := func(gtx layout.Context) layout.Dimensions {
 		cs := gtx.Constraints.Constrain(img.Size())
 		gs := img.Size()
-		k := minf32(1, float32(cs.X)/float32(gs.X), float32(cs.Y)/float32(gs.Y))
+		k := ycf32.Minf32(1, float32(cs.X)/float32(gs.X), float32(cs.Y)/float32(gs.Y))
 		k /= gtx.Metric.PxPerDp
 		var d layout.Dimensions
 		if cs.X < cs.Y {
