@@ -59,6 +59,7 @@ func (d *Drag) Offset(cfg unit.Metric, q event.Queue) (offs f32.Point, ok bool) 
 	return offs, true
 }
 
+// Add registers a hit and drag area.
 func (d *Drag) Add(ops *op.Ops) {
 	op := pointer.InputOp{
 		Tag:   d,
