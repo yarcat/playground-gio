@@ -53,13 +53,8 @@ func layoutImg(gtx layout.Context, img paint.ImageOp) layout.Dimensions {
 		cs := gtx.Constraints.Constrain(img.Size())
 		gs := img.Size()
 		k := ycf32.Minf32(1, float32(cs.X)/float32(gs.X), float32(cs.Y)/float32(gs.Y))
+		d := layout.Dimensions{Size: image.Pt(int(float32(gs.X)*k), int(float32(gs.X)*k))}
 		k /= gtx.Metric.PxPerDp
-		var d layout.Dimensions
-		if cs.X < cs.Y {
-			d.Size = image.Pt(cs.X, cs.X)
-		} else {
-			d.Size = image.Pt(cs.Y, cs.Y)
-		}
 		gtx.Constraints.Max = d.Size
 		widget.Image{Src: img, Scale: k}.Layout(gtx)
 		clip.Rect{Max: d.Size}.Add(gtx.Ops)
