@@ -14,9 +14,9 @@ import (
 )
 
 type transitionApp struct {
-	imgs  []*ycwidget.DragImage
-	win   *app.Window
-	theme *material.Theme
+	images []*ycwidget.Drag
+	win    *app.Window
+	theme  *material.Theme
 }
 
 func newTransitionApp(imgs ...image.Image) *transitionApp {
@@ -25,7 +25,9 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 		theme: material.NewTheme(gofont.Collection()),
 	}
 	for _, img := range imgs {
-		a.imgs = append(a.imgs, ycwidget.NewDragImage(img))
+		a.images = append(a.images, &ycwidget.Drag{
+			Widget: ycwidget.NewImage(img).Layout,
+		})
 	}
 	return a
 }
@@ -38,7 +40,7 @@ func (a *transitionApp) mainloop() error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			for _, img := range a.imgs {
+			for _, img := range a.images {
 				img.Layout(gtx)
 			}
 

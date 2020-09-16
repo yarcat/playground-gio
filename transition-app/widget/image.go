@@ -4,8 +4,6 @@ import (
 	"image"
 	"image/color"
 
-	"gioui.org/f32"
-	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -13,41 +11,23 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	ycf32 "github.com/yarcat/playground-gio/transition-app/f32"
-	ycgest "github.com/yarcat/playground-gio/transition-app/gesture"
 )
 
-// DragImage implements a draggable image.
-type DragImage struct {
-	img  paint.ImageOp
-	gest ycgest.Drag
-	offs f32.Point
+// Image implements a widget for drawing images.
+type Image struct {
+	op paint.ImageOp
 }
 
-// NewDragImage returns new draggable image.
-func NewDragImage(img image.Image) *DragImage {
-	return &DragImage{img: paint.NewImageOp(img)}
+// NewImage returns a widget for drawing images.
+func NewImage(img image.Image) *Image {
+	return &Image{
+		op: paint.NewImageOp(img),
+	}
 }
 
 // Layout lays out the image by taking the minimal space close the image size.
-func (img *DragImage) Layout(gtx layout.Context) layout.Dimensions {
-	if offs, ok := img.gest.Offset(gtx.Metric, gtx); ok {
-		img.offs = img.offs.Add(offs)
-	}
-
-	stack := op.Push(gtx.Ops)
-	op.Offset(img.offs).Add(gtx.Ops)
-	d := layoutImg(gtx, img.img)
-	stack.Pop()
-
-	minOffs := image.Pt(int(img.offs.X), int(img.offs.Y))
-	rect := image.Rectangle{Min: minOffs, Max: minOffs.Add(d.Size)}
-	pointer.Rect(rect).Add(gtx.Ops)
-	img.gest.Add(gtx.Ops)
-
-	return d
-}
-
-func layoutImg(gtx layout.Context, img paint.ImageOp) layout.Dimensions {
+func (w *Image) Layout(gtx layout.Context) layout.Dimensions {
+	img := w.op
 	macro := op.Record(gtx.Ops)
 	dim := func(gtx layout.Context) layout.Dimensions {
 		cs := gtx.Constraints.Constrain(img.Size())
