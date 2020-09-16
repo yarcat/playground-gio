@@ -63,7 +63,6 @@ func (d *Drag) Offset(cfg unit.Metric, q event.Queue) (offs f32.Point, ok bool) 
 func (d *Drag) Add(ops *op.Ops) {
 	op := pointer.InputOp{
 		Tag:   d,
-		Grab:  d.dragging,
 		Types: pointer.Press | pointer.Drag | pointer.Release,
 	}
 	op.Add(ops)

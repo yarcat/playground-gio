@@ -29,10 +29,12 @@ func (drag *Drag) Layout(gtx layout.Context) layout.Dimensions {
 	d := drag.Widget(gtx)
 	stack.Pop()
 
+	stack = op.Push(gtx.Ops)
 	minOffs := image.Pt(int(drag.offs.X), int(drag.offs.Y))
 	rect := image.Rectangle{Min: minOffs, Max: minOffs.Add(d.Size)}
 	pointer.Rect(rect).Add(gtx.Ops)
 	drag.gest.Add(gtx.Ops)
+	stack.Pop()
 
 	return d
 }
