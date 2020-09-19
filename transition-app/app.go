@@ -7,7 +7,6 @@ import (
 	ycwidget "github.com/yarcat/playground-gio/transition-app/widget"
 
 	"gioui.org/app"
-	"gioui.org/f32"
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
@@ -17,9 +16,11 @@ import (
 )
 
 type transitionApp struct {
-	images []*ycwidget.Drag
-	win    *app.Window
-	theme  *material.Theme
+	images      []*ycwidget.AffineState
+	angles      []widget.Float
+	lastChanged *widget.Float
+	win         *app.Window
+	theme       *material.Theme
 	// Real rotation is shiftedRotation - Pi
 	shiftedRotation widget.Float
 }
@@ -30,10 +31,12 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 		theme:           material.NewTheme(gofont.Collection()),
 		shiftedRotation: widget.Float{Value: math.Pi},
 	}
-	for _, img := range imgs {
-		a.images = append(a.images, &ycwidget.Drag{
-			Widget: ycwidget.NewImage(img).Layout,
-		})
+	a.images = make([]*ycwidget.AffineState, len(imgs))
+	a.angles = make([]widget.Float, len(imgs))
+	for i, img := range imgs {
+		w := ycwidget.DragAndRotate(
+			ycwidget.NewImage(img).Layout, &a.angles[i])
+		a.images[i] = &w
 	}
 	return a
 }
@@ -46,24 +49,15 @@ func (a *transitionApp) mainloop() error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			l := len(a.images) - 1
-			for _, img := range a.images[:1] {
+			for i, img := range a.images {
+				if img.Changed() {
+					a.lastChanged = &a.angles[i]
+				}
 				img.Layout(gtx)
 			}
-			a.rotated(gtx, a.images[l].Layout)
 
-			layout.S.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{
-					Axis: layout.Horizontal,
-				}.Layout(gtx,
-					layout.Flexed(1, material.Slider(
-						a.theme,
-						&a.shiftedRotation,
-						0,
-						2*math.Pi,
-					).Layout),
-				)
-			})
+			a.layoutRotationSlider(gtx)
+
 			e.Frame(gtx.Ops)
 		case system.DestroyEvent:
 			return e.Err
@@ -72,13 +66,20 @@ func (a *transitionApp) mainloop() error {
 	return nil
 }
 
-func (a *transitionApp) rotated(gtx layout.Context, widget layout.Widget) {
-	macro := op.Record(gtx.Ops)
-	d := widget(gtx)
-	call := macro.Stop()
-
-	defer op.Push(gtx.Ops).Pop()
-	o := layout.FPt(d.Size).Mul(0.5)
-	op.Affine(f32.Affine2D{}.Rotate(o, a.shiftedRotation.Value-math.Pi)).Add(gtx.Ops)
-	call.Add(gtx.Ops)
+func (a *transitionApp) layoutRotationSlider(gtx layout.Context) layout.Dimensions {
+	if a.lastChanged == nil {
+		return layout.Dimensions{Size: gtx.Constraints.Min}
+	}
+	return layout.S.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return layout.Flex{
+			Axis: layout.Horizontal,
+		}.Layout(gtx,
+			layout.Flexed(1, material.Slider(
+				a.theme,
+				a.lastChanged,
+				0,
+				2*math.Pi,
+			).Layout),
+		)
+	})
 }

@@ -7,34 +7,70 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/widget"
 
 	ycgest "github.com/yarcat/playground-gio/transition-app/gesture"
 )
 
-// Drag implements a draggable image.
-type Drag struct {
-	Widget layout.Widget
+// AffineState is for dragging and rotating widgets.
+type AffineState struct {
 	gest   ycgest.Drag
 	offs   f32.Point
+	float  *widget.Float
+	widget layout.Widget
+
+	changed bool
 }
 
-// Layout lays out the underlying image and makes its area draggable.
-func (drag *Drag) Layout(gtx layout.Context) layout.Dimensions {
-	if offs, ok := drag.gest.Offset(gtx.Metric, gtx); ok {
-		drag.offs = drag.offs.Add(offs)
+// Changed returns true if there was a state change since the last update.
+// Calling his method resets the changed state to false.
+func (state *AffineState) Changed() bool {
+	c := state.changed
+	state.changed = false
+	return c
+}
+
+// DragAndRotate allows to drag and rotate widgets. Rotation requires an
+// external widget that would modify the float. Dragging is applied on top
+// of a widget.
+func DragAndRotate(widget layout.Widget, float *widget.Float) AffineState {
+	return AffineState{
+		widget: widget,
+		float:  float,
+	}
+}
+
+// Layout handles events and lays out a widget.
+func (state *AffineState) Layout(gtx layout.Context) layout.Dimensions {
+	if state.float.Changed() {
+		state.changed = true
 	}
 
-	stack := op.Push(gtx.Ops)
-	op.Offset(drag.offs).Add(gtx.Ops)
-	d := drag.Widget(gtx)
-	stack.Pop()
+	if offs, ok := state.gest.Offset(gtx.Metric, gtx); ok {
+		state.changed = true
+		state.offs = state.offs.Add(offs)
+	}
 
-	stack = op.Push(gtx.Ops)
-	minOffs := image.Pt(int(drag.offs.X), int(drag.offs.Y))
+	macro := op.Record(gtx.Ops)
+	d := state.widget(gtx)
+	call := macro.Stop()
+
+	defer op.Push(gtx.Ops).Pop()
+	// Not translating pointer area to ensure its offset is always calculated
+	// relatively to the same origin.
+	minOffs := image.Pt(int(state.offs.X), int(state.offs.Y))
 	rect := image.Rectangle{Min: minOffs, Max: minOffs.Add(d.Size)}
 	pointer.Rect(rect).Add(gtx.Ops)
-	drag.gest.Add(gtx.Ops)
-	stack.Pop()
+	state.gest.Add(gtx.Ops)
 
-	return d
+	op.Affine(f32.Affine2D{}.
+		Rotate(layout.FPt(d.Size).Mul(0.5), state.float.Value).
+		Offset(state.offs),
+	).Add(gtx.Ops)
+	call.Add(gtx.Ops)
+
+	// AffineState represents a floating draggable widget, which doesn't really
+	// fit any layout management.
+	// TODO(yarcat): Don't allow to drag outside of the constraint area.
+	return layout.Dimensions{Size: gtx.Constraints.Min}
 }
