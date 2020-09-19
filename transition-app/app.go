@@ -16,7 +16,8 @@ import (
 )
 
 type transitionApp struct {
-	images      []*ycwidget.AffineState
+	images      []*ycwidget.Image
+	states      []*ycwidget.AffineState
 	angles      []widget.Float
 	lastChanged *widget.Float
 	win         *app.Window
@@ -31,12 +32,14 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 		theme:           material.NewTheme(gofont.Collection()),
 		shiftedRotation: widget.Float{Value: math.Pi},
 	}
-	a.images = make([]*ycwidget.AffineState, len(imgs))
+	a.images = make([]*ycwidget.Image, len(imgs))
+	a.states = make([]*ycwidget.AffineState, len(imgs))
 	a.angles = make([]widget.Float, len(imgs))
 	for i, img := range imgs {
-		w := ycwidget.DragAndRotate(
-			ycwidget.NewImage(img).Layout, &a.angles[i])
-		a.images[i] = &w
+		imgWidget := ycwidget.NewImage(img)
+		a.images[i] = imgWidget
+		w := ycwidget.DragAndRotate(imgWidget.Layout, &a.angles[i])
+		a.states[i] = &w
 	}
 	return a
 }
@@ -49,7 +52,7 @@ func (a *transitionApp) mainloop() error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			for i, img := range a.images {
+			for i, img := range a.states {
 				if img.Changed() {
 					a.lastChanged = &a.angles[i]
 				}
