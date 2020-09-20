@@ -9,3 +9,5 @@ require (
 	golang.org/x/sys v0.0.0-20200915084602-288bc346aa39 // indirect
 	golang.org/x/text v0.3.3 // indirect
 )
+
+replace gioui.org => ../gio

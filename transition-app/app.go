@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 
 	ycwidget "github.com/yarcat/playground-gio/transition-app/widget"
@@ -18,6 +19,7 @@ import (
 )
 
 type transitionApp struct {
+	rawImg      []image.Image
 	images      []*ycwidget.Image
 	states      []*ycwidget.AffineState
 	angles      []widget.Float
@@ -36,13 +38,23 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 		shiftedRotation: widget.Float{Value: math.Pi},
 		thumbnails:      layout.List{Axis: layout.Vertical},
 	}
+	halfTransparent := image.Uniform{color.RGBA{A: 0x80}}
+
 	a.images = make([]*ycwidget.Image, len(imgs))
 	a.states = make([]*ycwidget.AffineState, len(imgs))
 	a.angles = make([]widget.Float, len(imgs))
-	for i, img := range imgs {
+	a.rawImg = make([]image.Image, len(imgs))
+	for i, raw := range imgs {
+		a.rawImg[i] = raw
+
+		mask := image.NewRGBA(raw.Bounds())
+		draw.Draw(mask, mask.Bounds(), &halfTransparent, image.ZP, draw.Src)
+
+		img := image.NewRGBA(raw.Bounds())
+		draw.DrawMask(img, img.Bounds(), raw, image.ZP, mask, image.ZP, draw.Over)
 		imgWidget := ycwidget.NewImage(img)
 		a.images[i] = imgWidget
-		w := ycwidget.DragAndRotate(imgWidget.Layout, &a.angles[i])
+		w := ycwidget.DragAndRotate(&a.angles[i])
 		a.states[i] = &w
 	}
 	return a
@@ -51,16 +63,19 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 func (a *transitionApp) mainloop() error {
 	ops := &op.Ops{}
 
+	// a := [2]int{0xff, 0x00}
+	// da := [2]int{-0x0a, 0x0a}
+
 	for e := range a.win.Events() {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			for i, img := range a.states {
-				if img.Changed() {
+			for i, state := range a.states {
+				if state.Changed() {
 					a.lastChanged = &a.angles[i]
 				}
-				img.Layout(gtx)
+				state.Layout(gtx, a.images[i].Layout)
 			}
 
 			a.layoutRotationSlider(gtx)

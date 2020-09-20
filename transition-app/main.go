@@ -13,7 +13,6 @@ func main() {
 		app := newTransitionApp(
 			mustDecodePNG(res.GopherSimplePNG),
 			mustDecodePNG(res.GopherPNG),
-			mustDecodePNG(res.GopherPonyPNG),
 		)
 		if err := app.mainloop(); err != nil {
 			log.Fatal("mainloop failed:", err)
