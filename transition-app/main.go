@@ -17,10 +17,18 @@ import (
 
 func main() {
 	go func() {
-		app := newTransitionApp(
-			rotate(mustDecodePNG(res.GopherSimplePNG), math.Pi/6),
-			rotate(mustDecodePNG(res.GopherPNG), -math.Pi/6),
-		)
+		images := make(chan image.Image)
+		for _, d := range []struct {
+			res string
+			r   float64
+		}{
+			{res.GopherSimplePNG, math.Pi / 6},
+			{res.GopherPNG, -math.Pi / 6},
+		} {
+			d := d
+			go func() { images <- rotate(mustDecodePNG(d.res), d.r) }()
+		}
+		app := newTransitionApp(<-images, <-images)
 		if err := app.mainloop(); err != nil {
 			log.Fatal("mainloop failed:", err)
 		}
