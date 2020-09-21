@@ -2,54 +2,53 @@ package main
 
 import (
 	"image"
-
-	ycwidget "github.com/yarcat/playground-gio/transition-app/widget"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
 type transitionApp struct {
 	imgSource  []image.Image
-	imgWidget  []*ycwidget.Image
-	imgStates  []*ycwidget.AffineState
+	animations []*FrameSet
 	win        *app.Window
 	theme      *material.Theme
-	thumbnails layout.List
 }
 
 func newTransitionApp(imgs ...image.Image) *transitionApp {
-	a := &transitionApp{
+	imgSource := make([]image.Image, 0, len(imgs))
+	animations := make([]*FrameSet, 0, len(imgs))
+	for i, src := range imgs {
+		imgSource = append(imgSource, src)
+		var opts []FrameSetOptionFunc
+		if i%2 == 0 {
+			opts = append(opts, ReversePlayback)
+		}
+		fs := ApplyTransparency(src, 10, 200*time.Millisecond, opts...)
+		animations = append(animations, fs)
+	}
+	return &transitionApp{
 		win:        app.NewWindow(),
 		theme:      material.NewTheme(gofont.Collection()),
-		thumbnails: layout.List{Axis: layout.Vertical},
+		imgSource:  imgSource,
+		animations: animations,
 	}
-
-	var angle widget.Float
-	for _, src := range imgs {
-		img := transparentImage(src, 0xa0)
-		a.imgSource = append(a.imgSource, src)
-		a.imgWidget = append(a.imgWidget, ycwidget.NewImage(img))
-		a.imgStates = append(a.imgStates, ycwidget.DragAndRotate(&angle))
-	}
-	return a
 }
 
-func (a *transitionApp) mainloop() error {
+func (app *transitionApp) mainloop() error {
 	ops := &op.Ops{}
 
-	for e := range a.win.Events() {
+	for e := range app.win.Events() {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
 
-			for i, state := range a.imgStates {
-				state.Layout(gtx, a.imgWidget[i].Layout)
+			for _, widget := range app.animations {
+				widget.Layout(gtx)
 			}
 
 			e.Frame(gtx.Ops)
