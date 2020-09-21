@@ -25,9 +25,11 @@ func (fs *FrameSet) Layout(gtx layout.Context) layout.Dimensions {
 	img := fs.images[fs.curFrame]
 	now := time.Now()
 	if now.After(fs.nextAt) {
-		fs.curFrame += fs.dirFrame
-		if fs.curFrame == 0 || fs.curFrame == len(fs.frames)-1 {
-			fs.dirFrame = -fs.dirFrame
+		if len(fs.frames) > 1 {
+			fs.curFrame += fs.dirFrame
+			if fs.curFrame == 0 || fs.curFrame == len(fs.frames)-1 {
+				fs.dirFrame = -fs.dirFrame
+			}
 		}
 		fs.nextAt = now.Add(fs.duration)
 	}
@@ -45,10 +47,16 @@ func ApplyTransparency(img image.Image, frames int, duration time.Duration, opts
 		duration: duration,
 		nextAt:   time.Now(),
 	}
-	for i, da := 0, 0xff/float64(frames-1); i < frames; i++ {
-		img := transparentImage(img, uint8(0xff-da*float64(i)))
-		fs.frames = append(fs.frames, img)
-		fs.images = append(fs.images, ycwidget.NewImage(img))
+	fs.frames = append(fs.frames, img)
+	fs.images = append(fs.images, ycwidget.NewImage(img))
+	var da float64
+	if frames > 1 {
+		da = 0xff / float64(frames-1)
+		for i := 1; i < frames; i++ {
+			img := transparentImage(img, uint8(0xff-da*float64(i)))
+			fs.frames = append(fs.frames, img)
+			fs.images = append(fs.images, ycwidget.NewImage(img))
+		}
 	}
 	for _, opt := range opts {
 		opt(fs)
