@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/png"
 	"strings"
+
+	"gioui.org/widget"
 )
 
 func mustDecodePNG(data string) image.Image {
@@ -13,4 +15,12 @@ func mustDecodePNG(data string) image.Image {
 		panic(err)
 	}
 	return img
+}
+
+func mustNewIcon(data []byte) *widget.Icon {
+	icon, err := widget.NewIcon(data)
+	if err != nil {
+		panic(err)
+	}
+	return icon
 }

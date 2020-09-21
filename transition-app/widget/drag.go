@@ -14,10 +14,9 @@ import (
 
 // AffineState is for dragging and rotating widgets.
 type AffineState struct {
-	gest   ycgest.Drag
-	offs   f32.Point
-	float  *widget.Float
-	widget layout.Widget
+	gest  ycgest.Drag
+	offs  f32.Point
+	float *widget.Float
 
 	changed bool
 }
@@ -33,15 +32,12 @@ func (state *AffineState) Changed() bool {
 // DragAndRotate allows to drag and rotate widgets. Rotation requires an
 // external widget that would modify the float. Dragging is applied on top
 // of a widget.
-func DragAndRotate(widget layout.Widget, float *widget.Float) AffineState {
-	return AffineState{
-		widget: widget,
-		float:  float,
-	}
+func DragAndRotate(float *widget.Float) *AffineState {
+	return &AffineState{float: float}
 }
 
 // Layout handles events and lays out a widget.
-func (state *AffineState) Layout(gtx layout.Context) layout.Dimensions {
+func (state *AffineState) Layout(gtx layout.Context, widget layout.Widget) layout.Dimensions {
 	if state.float.Changed() {
 		state.changed = true
 	}
@@ -52,7 +48,7 @@ func (state *AffineState) Layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	macro := op.Record(gtx.Ops)
-	d := state.widget(gtx)
+	d := widget(gtx)
 	call := macro.Stop()
 
 	defer op.Push(gtx.Ops).Pop()

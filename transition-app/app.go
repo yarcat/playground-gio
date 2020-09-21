@@ -14,6 +14,9 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+
+	"golang.org/x/exp/shiny/materialdesign/icons"
+
 	ycwidget "github.com/yarcat/playground-gio/transition-app/widget"
 )
 
@@ -22,6 +25,7 @@ type transitionApp struct {
 	theme         *material.Theme
 	thumbnails    layout.List
 	thumbnailImgs []*ycwidget.Image
+	animations    []*FrameSet
 }
 
 func newTransitionApp(imgs ...image.Image) *transitionApp {
@@ -36,16 +40,35 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 	}
 }
 
-func (a *transitionApp) mainloop() error {
+type avState int
+
+const (
+	avStatePaused avState = iota
+	avStatePlaying
+)
+
+var avIcons = [2]*widget.Icon{mustNewIcon(icons.AVPlayArrow), mustNewIcon(icons.AVPause)}
+
+func (state avState) icon() *widget.Icon {
+	return avIcons[state]
+}
+
+func (app *transitionApp) mainloop() error {
 	ops := &op.Ops{}
 
-	thumbs := make(thumbnails, 0, len(a.thumbnailImgs))
-	for _, img := range a.thumbnailImgs {
+	thumbs := make(thumbnails, 0, len(app.thumbnailImgs))
+	for _, img := range app.thumbnailImgs {
 		thumbs = append(thumbs, &clickable{widget: img.Layout})
 	}
 
 	selected := 0
-	for e := range a.win.Events() {
+
+	var (
+		avCtrl  widget.Clickable
+		avState avState
+	)
+
+	for e := range app.win.Events() {
 		switch e := e.(type) {
 		case system.FrameEvent:
 			gtx := layout.NewContext(ops, e)
@@ -63,17 +86,28 @@ func (a *transitionApp) mainloop() error {
 					}
 					return layout.Flex{Axis: axis}.Layout(gtx,
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-							return layout.Center.Layout(gtx, a.thumbnailImgs[selected].Layout)
+							return layout.Center.Layout(gtx, app.thumbnailImgs[selected].Layout)
 						}),
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-							l := material.H5(a.theme, "PREVIEW\nPLACEHOLDER")
-							return layout.Center.Layout(gtx, l.Layout)
+							return layout.Stack{Alignment: layout.Center}.Layout(gtx,
+								layout.Stacked(func(gtx layout.Context) layout.Dimensions {
+									defer op.Record(gtx.Ops).Stop()
+									return layout.Center.Layout(gtx, app.thumbnailImgs[selected].Layout)
+								}),
+								layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+									l := material.H5(app.theme, "PREVIEW\nPLACEHOLDER")
+									return layout.Center.Layout(gtx, l.Layout)
+								}),
+								layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+									return layout.S.Layout(gtx, material.IconButton(app.theme, &avCtrl, avState.icon()).Layout)
+								}),
+							)
 						}),
 					)
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.S.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return thumbs.Layout(gtx, &a.thumbnails, selected)
+						return thumbs.Layout(gtx, &app.thumbnails, selected)
 					})
 				}),
 			)
