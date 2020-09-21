@@ -40,24 +40,39 @@ func (fs *FrameSet) Layout(gtx layout.Context) layout.Dimensions {
 // ApplyTransparency makes an image transparent during specified amount of
 // frames, allowing animation with the specified frame duration.
 func ApplyTransparency(img image.Image, frames int, duration time.Duration, opts ...FrameSetOptionFunc) *FrameSet {
-	fs := &FrameSet{
-		frames:   make([]image.Image, 0, frames),
-		images:   make([]*ycwidget.Image, 0, frames),
+	if frames < 1 {
+		frames = 1
+	}
+	fsC := make(chan *FrameSet, 1)
+	fsC <- &FrameSet{
+		frames:   make([]image.Image, frames),
+		images:   make([]*ycwidget.Image, frames),
 		dirFrame: 1,
 		duration: duration,
 		nextAt:   time.Now(),
 	}
-	fs.frames = append(fs.frames, img)
-	fs.images = append(fs.images, ycwidget.NewImage(img))
 	var da float64
 	if frames > 1 {
 		da = 0xff / float64(frames-1)
-		for i := 1; i < frames; i++ {
-			img := transparentImage(img, uint8(0xff-da*float64(i)))
-			fs.frames = append(fs.frames, img)
-			fs.images = append(fs.images, ycwidget.NewImage(img))
-		}
 	}
+	type token struct{}
+	done := make(chan token)
+	for i := 0; i < frames; i++ {
+		i := i
+		go func() {
+			defer func() { done <- token{} }()
+			img := transparentImage(img, uint8(0xff-da*float64(i)))
+			widget := ycwidget.NewImage(img)
+			fs := <-fsC
+			fs.frames[i] = img
+			fs.images[i] = widget
+			fsC <- fs
+		}()
+	}
+	for i := 0; i < frames; i++ {
+		<-done
+	}
+	fs := <-fsC
 	for _, opt := range opts {
 		opt(fs)
 	}

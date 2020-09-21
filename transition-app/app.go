@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"log"
 	"time"
 
 	"gioui.org/app"
@@ -27,11 +28,15 @@ func newTransitionApp(imgs ...image.Image) *transitionApp {
 	animations := make([]*FrameSet, 0, len(imgs))
 	for i, src := range imgs {
 		imgSource = append(imgSource, src)
-		var frames int
-		if i > 0 {
-			frames = 50
+		var opts []FrameSetOptionFunc
+		if i == 0 {
+			opts = append(opts, ReversePlayback)
 		}
-		fs := ApplyTransparency(src, frames, 50*time.Millisecond)
+		frames := 50
+		log.Printf("ApplyTransparency[%d] frames %d", i, frames)
+		begin := time.Now()
+		fs := ApplyTransparency(src, frames, 50*time.Millisecond, opts...)
+		log.Printf("ApplyTransparency[%d] finished in %v", i, time.Now().Sub(begin))
 		animations = append(animations, fs)
 	}
 	return &transitionApp{
@@ -66,6 +71,11 @@ func (app *transitionApp) mainloop() error {
 				// more colorful.
 				if i == 0 && opaque.Value {
 					opaqueFirstImage.Layout(gtx)
+					// Layout to update the state, but we don't want this to
+					// visible.
+					macro := op.Record(gtx.Ops)
+					widget.Layout(gtx)
+					macro.Stop()
 				} else {
 					widget.Layout(gtx)
 				}
