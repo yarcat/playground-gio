@@ -32,8 +32,8 @@ func (state *AffineState) Changed() bool {
 // DragAndRotate allows to drag and rotate widgets. Rotation requires an
 // external widget that would modify the float. Dragging is applied on top
 // of a widget.
-func DragAndRotate(float *widget.Float) AffineState {
-	return AffineState{float: float}
+func DragAndRotate(float *widget.Float) *AffineState {
+	return &AffineState{float: float}
 }
 
 // Layout handles events and lays out a widget.
