@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"image/color"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/f32"
@@ -30,13 +31,22 @@ type transitionApp struct {
 
 func newTransitionApp(imgs ...image.Image) *transitionApp {
 	thumbnails := make([]*ycwidget.Image, 0, len(imgs))
-	for _, img := range imgs {
+	animations := make([]*FrameSet, 0, len(imgs))
+	for i, img := range imgs {
 		thumbnails = append(thumbnails, ycwidget.NewImage(img))
+		frames := 25
+		duration := 100 * time.Millisecond
+		var opts []FrameSetOptionFunc
+		if i == 0 {
+			opts = append(opts, ReversePlayback)
+		}
+		animations = append(animations, ApplyTransparency(img, frames, duration, opts...))
 	}
 	return &transitionApp{
 		win:           app.NewWindow(),
 		theme:         material.NewTheme(gofont.Collection()),
 		thumbnailImgs: thumbnails,
+		animations:    animations,
 	}
 }
 
@@ -52,6 +62,8 @@ var avIcons = [2]*widget.Icon{mustNewIcon(icons.AVPlayArrow), mustNewIcon(icons.
 func (state avState) icon() *widget.Icon {
 	return avIcons[state]
 }
+
+func (state avState) change() avState { return 1 - state }
 
 func (app *transitionApp) mainloop() error {
 	ops := &op.Ops{}
@@ -78,6 +90,11 @@ func (app *transitionApp) mainloop() error {
 					selected = i
 				}
 			}
+
+			if avCtrl.Clicked() {
+				avState = avState.change()
+			}
+
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					axis := layout.Horizontal
@@ -95,8 +112,15 @@ func (app *transitionApp) mainloop() error {
 									return layout.Center.Layout(gtx, app.thumbnailImgs[selected].Layout)
 								}),
 								layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-									l := material.H5(app.theme, "PREVIEW\nPLACEHOLDER")
-									return layout.Center.Layout(gtx, l.Layout)
+									if avState == avStatePaused {
+										l := material.H5(app.theme, "PREVIEW\nPLACEHOLDER")
+										return layout.Center.Layout(gtx, l.Layout)
+									}
+									var d layout.Dimensions
+									for _, anim := range app.animations {
+										d = anim.Layout(gtx)
+									}
+									return d
 								}),
 								layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 									return layout.S.Layout(gtx, material.IconButton(app.theme, &avCtrl, avState.icon()).Layout)
